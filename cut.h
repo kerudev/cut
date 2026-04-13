@@ -380,3 +380,24 @@ int _test_suite(bool (**tests)(), size_t total) {
 })
 
 #endif // CUT_IMPLEMENTATION
+
+#ifndef __CUT_REMOVE_PREFIX_GUARD
+#define __CUT_REMOVE_PREFIX_GUARD
+    #ifdef CUT_REMOVE_PREFIX
+        // Macros
+        #define ARR_LEN             CUT_ARR_LEN
+        #define LIST_FROM           CUT_LIST_FROM
+        // Structs
+        #define List                Cut_List
+        // Public
+        #define list_new            cut_list_new
+        #define list_from_arr       cut_list_from_arr
+        #define list_free_struct    cut_list_free_struct
+        #define list_free           cut_list_free
+        #define list_push           cut_list_push
+        #define list_comp           cut_list_comp
+        #define list_sort           cut_list_sort
+        #define list_eq             cut_list_eq
+        #define str_clone           cut_str_clone
+    #endif // CUT_REMOVE_PREFIX
+#endif // __CUT_REMOVE_PREFIX_GUARD
