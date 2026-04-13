@@ -17,7 +17,7 @@
 #endif
 
 typedef struct {
-    char   **items;
+    void   **items;
     size_t size;
     size_t capacity;
 } Cut_List;
@@ -26,7 +26,25 @@ typedef struct {
 Cut_List *cut_list_new();
 
 /* TODO */
-bool cut_list_push(Cut_List *ls, char *s);
+Cut_List *cut_list_from_arr(void **arr, size_t size);
+
+/* TODO */
+bool cut_list_free_struct(Cut_List *ls);
+
+/* TODO */
+bool cut_list_free(Cut_List *ls);
+
+/* TODO */
+bool cut_list_push(Cut_List *ls, void *s);
+
+/* TODO */
+int cut_list_comp(const void *a, const void *b);
+
+/* TODO */
+void cut_list_sort(Cut_List *ls);
+
+/* TODO */
+bool cut_list_eq(Cut_List *ls1, Cut_List *ls2);
 
 /* TODO */
 char *cut_str_clone(const char *s);
@@ -55,6 +73,11 @@ static void _cut_err(const char *file, int line, const char *func, const char *f
 #define CUT_THROW(ret, fmt, ...) ({ return ret; })
 #endif // CUT_DEBUG
 
+#define CUT_ARR_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
+
+#define CUT_LIST_FROM(arr) \
+    cut_list_from_arr((void**)arr, sizeof(arr)/sizeof(arr[0]))
+
 Cut_List *cut_list_new() {
     Cut_List *ls = malloc(sizeof(Cut_List));
     if (!ls) CUT_THROW(NULL, "malloc error");
@@ -68,7 +91,38 @@ Cut_List *cut_list_new() {
     return ls;
 }
 
-bool cut_list_push(Cut_List *ls, char *s) {
+Cut_List *cut_list_from_arr(void **arr, size_t size) {
+    if (!arr) CUT_THROW(NULL, "arr evaluates to false");
+
+    Cut_List *ls = cut_list_new();
+    if (!ls) CUT_THROW(NULL, "vec_new failed");
+
+    for (size_t i = 0; i < size; i++)
+        if (!cut_list_push(ls, arr[i])) CUT_THROW(NULL, "cut_list_push failed");
+
+    return ls;
+}
+
+bool cut_list_free_struct(Cut_List *ls) {
+    if (!ls) CUT_THROW(false, "ls evaluates to false");
+
+    if (ls->items) free(ls->items);
+    free(ls);
+    ls = NULL;
+
+    return true;
+}
+
+bool cut_list_free(Cut_List *ls) {
+    if (!ls) CUT_THROW(false, "ls evaluates to false");
+
+    for (size_t i = 0; i < ls->size; i++)
+        if (ls->items[i]) free(ls->items[i]);
+
+    return cut_list_free_struct(ls);
+}
+
+bool cut_list_push(Cut_List *ls, void *s) {
     if (ls->size == ls->capacity) {
         ls->capacity += CUT_CAPACITY_STEP;
 
@@ -78,7 +132,36 @@ bool cut_list_push(Cut_List *ls, char *s) {
         ls->items = tmp;
     }
 
-    ls->items[ls->size++] = cut_str_clone(s);
+    ls->items[ls->size++] = cut_str_clone((char*)s);
+
+    return true;
+}
+
+int cut_list_comp(const void *a, const void *b) {
+    const char *s1 = *(const char **)a;
+    const char *s2 = *(const char **)b;
+
+    while (*s1 && *s2 && *s1 == *s2) s1++, s2++;
+
+    int diff = (unsigned char)*s1 - (unsigned char)*s2;
+
+    return diff;
+}
+
+void cut_list_sort(Cut_List *ls) {
+    qsort(ls->items, ls->size, sizeof(char *), cut_list_comp);
+}
+
+bool cut_list_eq(Cut_List *ls1, Cut_List *ls2) {
+    if (!ls1 | !ls2) return false;
+    if (ls1->size != ls2->size) return false;
+
+    for (size_t i = 0; i < ls1->size; i++) {
+        char *s1 = ls1->items[i];
+        char *s2 = ls2->items[i];
+
+        while (*s1 && *s2) if (*s1++ != *s2++) return false;
+    }
 
     return true;
 }
@@ -206,94 +289,94 @@ int _test_suite(bool (**tests)(), size_t total) {
     return 0;
 }
 
-#define ASSERT_ZERO(n, ...) ({                          \
-    bool ok = _assert(n == 0, ##__VA_ARGS__);           \
-    if (!in_assert_block) return ok;                    \
-    ok;                                                 \
+#define ASSERT_ZERO(n, ...) ({                                  \
+    bool ok = _assert(n == 0, ##__VA_ARGS__);                   \
+    if (!in_assert_block) return ok;                            \
+    ok;                                                         \
 })
 
-#define ASSERT_TRUE(b, ...) ({                          \
-    bool ok = _assert(b, ##__VA_ARGS__);                \
-    if (!in_assert_block) return ok;                    \
-    ok;                                                 \
+#define ASSERT_TRUE(b, ...) ({                                  \
+    bool ok = _assert(b, ##__VA_ARGS__);                        \
+    if (!in_assert_block) return ok;                            \
+    ok;                                                         \
 })
 
-#define ASSERT_FALSE(b, ...) ({                         \
-    bool ok = _assert(!b, ##__VA_ARGS__);               \
-    if (!in_assert_block) return ok;                    \
-    ok;                                                 \
+#define ASSERT_FALSE(b, ...) ({                                 \
+    bool ok = _assert(!b, ##__VA_ARGS__);                       \
+    if (!in_assert_block) return ok;                            \
+    ok;                                                         \
 })
 
-#define ASSERT_NULL(cond, ...) ({                       \
-    bool ok = _assert((cond == NULL), ##__VA_ARGS__);   \
-    if (!in_assert_block) return ok;                    \
-    ok;                                                 \
+#define ASSERT_NULL(cond, ...) ({                               \
+    bool ok = _assert((cond == NULL), ##__VA_ARGS__);           \
+    if (!in_assert_block) return ok;                            \
+    ok;                                                         \
 })
 
-#define ASSERT_NOT_NULL(cond, ...) ({                   \
-    bool ok = _assert((cond != NULL), ##__VA_ARGS__);   \
-    if (!in_assert_block) return ok;                    \
-    ok;                                                 \
+#define ASSERT_NOT_NULL(cond, ...) ({                           \
+    bool ok = _assert((cond != NULL), ##__VA_ARGS__);           \
+    if (!in_assert_block) return ok;                            \
+    ok;                                                         \
 })
 
-#define ASSERT_STR(s1, s2, ...) ({                      \
-    bool ok = _assert(strcmp(s1, s2) == 0, ##__VA_ARGS__); \
-    if (!in_assert_block) return ok;                    \
-    ok;                                                 \
+#define ASSERT_STR(s1, s2, ...) ({                              \
+    bool ok = _assert(strcmp(s1, s2) == 0, ##__VA_ARGS__);      \
+    if (!in_assert_block) return ok;                            \
+    ok;                                                         \
 })
 
-#define ASSERT_ARR_STR(a1, s1, a2, s2, ...) ({          \
-    bool ok = _assert_arr_str(a1, s1, a2, s2);          \
-    if (!in_assert_block) return ok;                    \
-    ok;                                                 \
+#define ASSERT_ARR_STR(a1, s1, a2, s2, ...) ({                  \
+    bool ok = _assert_arr_str(a1, s1, a2, s2);                  \
+    if (!in_assert_block) return ok;                            \
+    ok;                                                         \
 })
 
-#define ASSERT_ARR_INT(a1, s1, a2, s2, ...) ({          \
-    bool ok = _assert_arr_int(a1, s1, a2, s2);          \
-    if (!in_assert_block) return ok;                    \
-    ok;                                                 \
+#define ASSERT_ARR_INT(a1, s1, a2, s2, ...) ({                  \
+    bool ok = _assert_arr_int(a1, s1, a2, s2);                  \
+    if (!in_assert_block) return ok;                            \
+    ok;                                                         \
 })
 
-#define ASSERT_BLOCK(...) ({                            \
-    in_assert_block = true;                             \
-    bool results[] = { __VA_ARGS__ };                   \
-    bool ok = _assert_block(results, sizeof(results)/sizeof(results[0])); \
-    in_assert_block = false;                            \
-    if (!in_assert_manual) return ok;                   \
-    ok;                                                 \
+#define ASSERT_BLOCK(...) ({                                    \
+    in_assert_block = true;                                     \
+    bool results[] = { __VA_ARGS__ };                           \
+    bool ok = _assert_block(results, CUT_ARR_LEN(results));     \
+    in_assert_block = false;                                    \
+    if (!in_assert_manual) return ok;                           \
+    ok;                                                         \
 })
 
-#define ASSERT_MANUAL(...) ({                           \
-    in_assert_manual = true;                            \
-    bool _result = ASSERT_BLOCK(__VA_ARGS__);           \
-    in_assert_manual = false;                           \
-    _result;                                            \
+#define ASSERT_MANUAL(...) ({                                   \
+    in_assert_manual = true;                                    \
+    bool _result = ASSERT_BLOCK(__VA_ARGS__);                   \
+    in_assert_manual = false;                                   \
+    _result;                                                    \
 })
 
-#define SKIP() {                                        \
-    _test_skip();                                       \
-    return true;                                        \
+#define SKIP() {                                                \
+    _test_skip();                                               \
+    return true;                                                \
 }
 
-#define FAIL() {                                        \
-    return false;                                       \
+#define FAIL() {                                                \
+    return false;                                               \
 }
 
-#define FREE(var) ({                                    \
-    free(var);                                          \
-    if (!in_assert_block) return true;                  \
-    true;                                               \
+#define FREE(var) ({                                            \
+    free(var);                                                  \
+    if (!in_assert_block) return true;                          \
+    true;                                                       \
 })
 
-#define FREE_ARRAY(arr, len) ({                         \
-    for (size_t i = 0; i < len; i++) free(arr[i]);      \
-    free(arr);                                          \
-    true;                                               \
+#define FREE_ARRAY(arr, len) ({                                 \
+    for (size_t i = 0; i < len; i++) free(arr[i]);              \
+    free(arr);                                                  \
+    true;                                                       \
 })
 
-#define TEST_SUITE(...) ({                              \
-    bool (*tests[])(void) = { __VA_ARGS__ };            \
-    return _test_suite(tests, sizeof(tests)/sizeof(tests[0])); \
+#define TEST_SUITE(...) ({                                      \
+    bool (*tests[])(void) = { __VA_ARGS__ };                    \
+    return _test_suite(tests, CUT_ARR_LEN(tests));              \
 })
 
 #endif // CUT_IMPLEMENTATION
